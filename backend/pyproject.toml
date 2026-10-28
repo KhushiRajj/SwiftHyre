@@ -1,0 +1,12 @@
+[project]
+name = "swifthire"
+version = "0.1.0"
+description = "SwiftHyre backend"
+requires-python = ">=3.11"
+dependencies = [
+  "Flask>=3.0.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

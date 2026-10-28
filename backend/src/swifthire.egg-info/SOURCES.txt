@@ -1,0 +1,9 @@
+pyproject.toml
+src/swifthire/config.py
+src/swifthire/extensions.py
+src/swifthire.egg-info/PKG-INFO
+src/swifthire.egg-info/SOURCES.txt
+src/swifthire.egg-info/dependency_links.txt
+src/swifthire.egg-info/requires.txt
+src/swifthire.egg-info/top_level.txt
+tests/test_health.py
