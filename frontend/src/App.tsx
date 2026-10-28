@@ -1,7 +1,5 @@
+import AuthPage from './features/auth/AuthPage';
+
 export default function App() {
-  return (
-    <main>
-      <h1>SwiftHyre</h1>
-    </main>
-  );
+  return <AuthPage />;
 }
