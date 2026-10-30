@@ -2,6 +2,7 @@ from io import BytesIO
 
 from swifthire import create_app
 from swifthire.applications.service import get_application_service
+from swifthire.workflow.service import get_workflow_service
 
 
 def test_recruiter_stage_decisions_are_scoped_and_idempotent():
@@ -80,3 +81,56 @@ def test_recruiter_stage_decisions_are_scoped_and_idempotent():
     assert threshold.status_code == 201
     assert threshold.get_json()['decision'] == 'advance'
     assert threshold.get_json()['status'] == 'recommendation'
+
+
+def test_list_decisions_for_application_returns_created_decisions_in_order():
+    app = create_app({'TESTING': True, 'SECRET_KEY': 'test-secret-key'})
+    client = app.test_client()
+    client.post('/api/auth/register', json={
+        'name': 'Recruiter',
+        'email': 'history@example.com',
+        'password': 'secret123',
+    })
+    job = client.post('/api/recruiter/jobs', json={
+        'title': 'Engineer',
+        'description': 'Build reliable software.',
+        'status': 'published',
+        'public_slug': 'history-engineer',
+    }).get_json()
+
+    def apply(email: str):
+        response = client.post(
+            f"/api/public/jobs/{job['public_slug']}/applications",
+            data={
+                'name': 'Candidate',
+                'email': email,
+                'cv': (BytesIO(b'%PDF-1.4\n%%EOF'), 'resume.pdf', 'application/pdf'),
+            },
+            content_type='multipart/form-data',
+        )
+        assert response.status_code == 201
+        return response.get_json()
+
+    first_application = apply('first-history@example.com')
+    second_application = apply('second-history@example.com')
+
+    first_decision = client.post(
+        f"/api/recruiter/jobs/{job['id']}/applications/{first_application['id']}/decisions",
+        json={'decision': 'advance', 'expected_stage': 'online_assessment'},
+    ).get_json()
+    second_decision = client.post(
+        f"/api/recruiter/jobs/{job['id']}/applications/{first_application['id']}/decisions",
+        json={'decision': 'reject', 'expected_stage': 'coding_assessment'},
+    ).get_json()
+    client.post(
+        f"/api/recruiter/jobs/{job['id']}/applications/{second_application['id']}/decisions",
+        json={'decision': 'reject', 'expected_stage': 'online_assessment'},
+    )
+
+    with app.app_context():
+        decisions = get_workflow_service().list_decisions_for_application(first_application['id'])
+
+    assert [decision.id for decision in decisions] == [first_decision['id'], second_decision['id']]
+    assert [decision.created_at for decision in decisions] == sorted(
+        decision.created_at for decision in decisions
+    )

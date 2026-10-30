@@ -21,6 +21,14 @@ class WorkflowService:
         self._decisions_by_id: dict[str, ApplicationDecision] = {}
         self._decision_keys_by_application: dict[str, dict[str, ApplicationDecision]] = {}
 
+    def list_decisions_for_application(self, application_id: str) -> list[ApplicationDecision]:
+        decisions = [
+            decision
+            for decision in self._decisions_by_id.values()
+            if decision.application_id == application_id
+        ]
+        return sorted(decisions, key=lambda decision: (decision.created_at, decision.id))
+
     def get_existing_decision(self, job_id: str, application_id: str, idempotency_key: str | None) -> ApplicationDecision | None:
         if not idempotency_key:
             return None

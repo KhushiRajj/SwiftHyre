@@ -12,6 +12,7 @@ from .coding.service import CodingChallengeService
 from .config import get_config
 from .jobs.routes import jobs_bp
 from .jobs.service import JobService
+from .reporting.routes import reporting_bp
 from .workflow.routes import workflow_bp
 
 
@@ -34,6 +35,7 @@ def create_app(config_overrides: dict | None = None) -> Flask:
     app.register_blueprint(recruiter_applications_bp)
     app.register_blueprint(workflow_bp)
     app.register_blueprint(assessments_bp)
+    app.register_blueprint(reporting_bp)
     app.register_blueprint(coding_bp)
 
     @app.get('/api/health')
