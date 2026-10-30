@@ -5,6 +5,7 @@ from swifthire import create_app
 from swifthire.applications.service import get_application_service
 from swifthire.coding.runner import ExecutionResult
 from swifthire.coding.service import CodingChallengeService
+from swifthire.jobs.service import get_job_service
 from swifthire.workflow.service import get_workflow_service
 
 
@@ -309,3 +310,20 @@ def test_available_actions_follow_application_stage_and_status():
         {'decision': 'advance', 'expected_stage': 'online_assessment'},
         {'decision': 'reject', 'expected_stage': 'online_assessment'},
     ]
+
+
+def test_final_stage_does_not_offer_noop_advance():
+    app = create_app({'TESTING': True, 'SECRET_KEY': 'test-secret-key'})
+    client = app.test_client()
+    _register_recruiter(client, 'final-stage-owner@example.com')
+    job = _create_job(client, title='Engineer', slug='final-stage-engineer')
+    application = _apply(client, job['public_slug'], 'final-stage@example.com')
+
+    with app.app_context():
+        get_job_service().get_by_id(job['id']).stage_order = ['voice_interview']
+        get_application_service().get_by_id(application['id']).current_stage = 'voice_interview'
+
+    response = client.get(f"/api/recruiter/jobs/{job['id']}/dashboard")
+    assert response.status_code == 200
+    actions = response.get_json()['candidates'][0]['available_actions']
+    assert actions == [{'decision': 'reject', 'expected_stage': 'voice_interview'}]

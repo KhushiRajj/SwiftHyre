@@ -78,10 +78,16 @@ class ReportingService:
             current_stage = getattr(application, 'current_stage', None)
             available_actions = []
             if status != 'rejected' and current_stage in job.stage_order:
-                available_actions = [
-                    {'decision': 'advance', 'expected_stage': current_stage},
-                    {'decision': 'reject', 'expected_stage': current_stage},
-                ]
+                current_stage_index = job.stage_order.index(current_stage)
+                if current_stage_index + 1 < len(job.stage_order):
+                    available_actions.append({
+                        'decision': 'advance',
+                        'expected_stage': current_stage,
+                    })
+                available_actions.append({
+                    'decision': 'reject',
+                    'expected_stage': current_stage,
+                })
             notification_states = {stage: 'not_applicable' for stage in job.stage_order}
 
             candidates.append({
