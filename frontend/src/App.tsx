@@ -1,7 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import CandidateCodingPage from './features/coding/CandidateCodingPage';
 import ChallengeEditor from './features/coding/ChallengeEditor';
 import AuthPage from './features/auth/AuthPage';
+import { requestJson } from './api';
+import JobListPage, { type JobSummary } from './features/jobs/JobListPage';
+import RecruiterDashboardPage from './features/reporting/RecruiterDashboardPage';
 
 type PublicChallenge = {
   id: string;
@@ -16,27 +19,6 @@ type SubmissionResponse = {
   score?: number;
   message?: string;
 };
-
-type ApiError = {
-  error?: string;
-};
-
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
-    credentials: 'include',
-    ...init,
-  });
-  const body: unknown = await response.json();
-
-  if (!response.ok) {
-    const message = typeof body === 'object' && body !== null && 'error' in body
-      ? (body as ApiError).error
-      : undefined;
-    throw new Error(message || 'The request could not be completed.');
-  }
-
-  return body as T;
-}
 
 function RecruiterChallengeRoute({ jobId }: { jobId: string }) {
   const [saved, setSaved] = useState(false);
@@ -62,15 +44,54 @@ function RecruiterChallengeRoute({ jobId }: { jobId: string }) {
 
 function RecruiterAuthRoute() {
   return (
-    <AuthPage
-      onSubmit={async ({ mode, name, email, password }) => {
-        await requestJson(mode === 'register' ? '/api/auth/register' : '/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(mode === 'register' ? { name, email, password } : { email, password }),
-        });
-      }}
-    />
+    <>
+      <AuthPage
+        onSubmit={async ({ mode, name, email, password }) => {
+          await requestJson(mode === 'register' ? '/api/auth/register' : '/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(mode === 'register' ? { name, email, password } : { email, password }),
+          });
+        }}
+      />
+      <p><a href="/recruiter/jobs">Recruiter jobs</a></p>
+    </>
+  );
+}
+
+function RecruiterJobsRoute() {
+  const [jobs, setJobs] = useState<JobSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const loadJobs = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      setJobs(await requestJson<JobSummary[]>('/api/recruiter/jobs'));
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Could not load recruiter jobs.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadJobs();
+  }, [loadJobs]);
+
+  return (
+    <>
+      <p><a href="/">SwiftHyre home</a></p>
+      {loading ? <p role="status">Loading jobs...</p> : null}
+      {error ? (
+        <section>
+          <p role="alert">{error}</p>
+          <button type="button" onClick={() => { void loadJobs(); }}>Retry</button>
+        </section>
+      ) : null}
+      {!loading && !error ? <JobListPage jobs={jobs} /> : null}
+    </>
   );
 }
 
@@ -168,6 +189,15 @@ export default function App() {
     return <RecruiterAuthRoute />;
   }
 
+  if (window.location.pathname === '/recruiter/jobs' || window.location.pathname === '/recruiter/jobs/') {
+    return <RecruiterJobsRoute />;
+  }
+
+  const resultsRoute = window.location.pathname.match(/^\/recruiter\/jobs\/([^/]+)\/results\/?$/);
+  if (resultsRoute) {
+    return <RecruiterDashboardPage jobId={resultsRoute[1]} />;
+  }
+
   const recruiterRoute = window.location.pathname.match(
     /^\/recruiter\/jobs\/([^/]+)\/coding-challenges\/?$/,
   );
@@ -184,6 +214,7 @@ export default function App() {
     <main>
       <h1>SwiftHyre</h1>
       <p><a href="/auth">Recruiter sign in or create an account</a></p>
+      <p><a href="/recruiter/jobs">Recruiter jobs</a></p>
       <p>Recruiters can create coding challenges at /recruiter/jobs/&lt;job-id&gt;/coding-challenges.</p>
       <p>Candidates can open coding challenges at /jobs/&lt;public-job-slug&gt;/coding-challenges.</p>
     </main>

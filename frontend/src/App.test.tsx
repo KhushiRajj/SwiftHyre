@@ -2,6 +2,14 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import App from './App';
 
+function response(body: unknown, status = 200): Response {
+  return {
+    ok: status < 400,
+    status,
+    json: async () => body,
+  } as Response;
+}
+
 describe('App', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -12,6 +20,52 @@ describe('App', () => {
     render(<App />);
 
     expect(screen.getByRole('heading', { name: 'SwiftHyre' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Recruiter jobs' }))
+      .toHaveAttribute('href', '/recruiter/jobs');
+  });
+
+  it('links authenticated recruiters to their jobs from the auth page', () => {
+    window.history.pushState({}, '', '/auth');
+
+    render(<App />);
+
+    expect(screen.getByRole('link', { name: 'Recruiter jobs' }))
+      .toHaveAttribute('href', '/recruiter/jobs');
+  });
+
+  it('loads recruiter jobs and a selected job dashboard', async () => {
+    const fetchMock = vi.spyOn(window, 'fetch')
+      .mockResolvedValueOnce(response([
+        { id: 'job-123', title: 'Senior Product Designer', status: 'published' },
+      ]))
+      .mockResolvedValueOnce(response({
+        job: { id: 'job-123', title: 'Senior Product Designer', status: 'published' },
+        counts: { total: 0, by_status: {} },
+        candidates: [],
+      }));
+    window.history.pushState({}, '', '/recruiter/jobs');
+
+    const jobsPage = render(<App />);
+    const resultsLink = await screen.findByRole('link', {
+      name: 'Results for Senior Product Designer',
+    });
+    expect(resultsLink).toHaveAttribute('href', '/recruiter/jobs/job-123/results');
+    jobsPage.unmount();
+
+    window.history.pushState({}, '', '/recruiter/jobs/job-123/results');
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'Senior Product Designer' })).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      '/api/recruiter/jobs',
+      expect.objectContaining({ credentials: 'include' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      '/api/recruiter/jobs/job-123/dashboard',
+      expect.objectContaining({ credentials: 'include' }),
+    );
   });
 
   it('creates a recruiter account through the auth route', async () => {

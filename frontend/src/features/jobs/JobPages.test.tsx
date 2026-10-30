@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import JobEditor from './JobEditor';
 import PublicJobPage from './PublicJobPage';
+import JobListPage from './JobListPage';
 
 describe('Job workflows', () => {
   it('shows validation errors in the job editor', () => {
@@ -31,5 +32,16 @@ describe('Job workflows', () => {
 
     expect(screen.getByRole('heading', { name: 'Senior Product Designer' })).toBeInTheDocument();
     expect(screen.getByText('Design product experiences.')).toBeInTheDocument();
+  });
+
+  it('links each recruiter job to its results dashboard', () => {
+    render(
+      <JobListPage
+        jobs={[{ id: 'job-123', title: 'Senior Product Designer', status: 'published' }]}
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: 'Results for Senior Product Designer' }))
+      .toHaveAttribute('href', '/recruiter/jobs/job-123/results');
   });
 });
