@@ -11,6 +11,13 @@ describe('Job workflows', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Title and description are required.');
   });
 
+  it('includes stage configuration fields for progression decisions', () => {
+    render(<JobEditor />);
+
+    expect(screen.getByLabelText(/stage order/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/recommendation threshold/i)).toBeInTheDocument();
+  });
+
   it('renders a published public job page', () => {
     render(
       <PublicJobPage

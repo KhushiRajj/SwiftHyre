@@ -15,7 +15,16 @@ class JobService:
         self._jobs_by_id: Dict[str, Job] = {}
         self._jobs_by_slug: Dict[str, Job] = {}
 
-    def create_job(self, recruiter_id: str, title: str, description: str, status: str = 'draft', public_slug: str | None = None) -> Job:
+    def create_job(
+        self,
+        recruiter_id: str,
+        title: str,
+        description: str,
+        status: str = 'draft',
+        public_slug: str | None = None,
+        stage_order: list[str] | None = None,
+        recommendation_threshold: int | None = None,
+    ) -> Job:
         slug = public_slug or self._generate_slug(title)
         while slug in self._jobs_by_slug:
             slug = f"{slug}-{len(self._jobs_by_slug)}"
@@ -26,6 +35,8 @@ class JobService:
             description=description,
             status=status if status in VALID_STATUSES else 'draft',
             public_slug=slug,
+            stage_order=stage_order,
+            recommendation_threshold=recommendation_threshold,
         )
         self._jobs_by_id[job.id] = job
         self._jobs_by_slug[job.public_slug] = job
@@ -57,6 +68,16 @@ class JobService:
                 self._jobs_by_slug.pop(job.public_slug, None)
                 job.public_slug = new_slug
                 self._jobs_by_slug[job.public_slug] = job
+        if 'stage_order' in updates:
+            stage_order = updates['stage_order']
+            if isinstance(stage_order, list) and stage_order:
+                job.stage_order = [str(stage).strip() for stage in stage_order if str(stage).strip()]
+        if 'recommendation_threshold' in updates:
+            try:
+                threshold = int(updates['recommendation_threshold'])
+            except (TypeError, ValueError):
+                threshold = 80
+            job.recommendation_threshold = max(0, min(100, threshold))
 
         return job
 

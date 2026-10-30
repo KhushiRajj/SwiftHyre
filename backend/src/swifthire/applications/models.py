@@ -28,9 +28,10 @@ class Application:
     cv: StoredCv
     status: str
     created_at: str
+    current_stage: str = 'online_assessment'
 
     @classmethod
-    def create(cls, job_id: str, applicant_name: str, email: str, cv: StoredCv) -> 'Application':
+    def create(cls, job_id: str, applicant_name: str, email: str, cv: StoredCv, current_stage: str = 'online_assessment') -> 'Application':
         return cls(
             id=str(uuid4()),
             job_id=job_id,
@@ -39,6 +40,7 @@ class Application:
             cv=cv,
             status='pending',
             created_at=datetime.now(timezone.utc).isoformat(),
+            current_stage=current_stage,
         )
 
     def to_dict(self) -> dict:
@@ -49,5 +51,6 @@ class Application:
             'email': self.email,
             'cv': self.cv.to_dict(),
             'status': self.status,
+            'current_stage': self.current_stage,
             'created_at': self.created_at,
         }

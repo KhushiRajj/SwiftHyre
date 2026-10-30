@@ -29,7 +29,15 @@ def create_job():
 
     status = data.get('status', 'draft')
     public_slug = (data.get('public_slug') or None)
-    job = service.create_job(recruiter_id, title, description, status=status, public_slug=public_slug)
+    job = service.create_job(
+        recruiter_id,
+        title,
+        description,
+        status=status,
+        public_slug=public_slug,
+        stage_order=data.get('stage_order'),
+        recommendation_threshold=data.get('recommendation_threshold'),
+    )
     response = jsonify(job.to_dict())
     response.status_code = 201
     return response
