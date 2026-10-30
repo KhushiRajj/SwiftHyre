@@ -6,6 +6,9 @@ from .applications.service import ApplicationService
 from .assessments.routes import assessments_bp
 from .auth.routes import auth_bp
 from .auth.service import RecruiterService
+from .coding.routes import coding_bp
+from .coding.runner import CodeRunner
+from .coding.service import CodingChallengeService
 from .config import get_config
 from .jobs.routes import jobs_bp
 from .jobs.service import JobService
@@ -21,6 +24,9 @@ def create_app(config_overrides: dict | None = None) -> Flask:
     app.extensions['recruiter_service'] = RecruiterService()
     app.extensions['job_service'] = JobService()
     app.extensions['application_service'] = ApplicationService()
+    app.extensions['coding_service'] = CodingChallengeService(
+        runner=CodeRunner(api_key=app.config.get('ONLINECOMPILER_API_KEY')),
+    )
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(jobs_bp)
@@ -28,6 +34,7 @@ def create_app(config_overrides: dict | None = None) -> Flask:
     app.register_blueprint(recruiter_applications_bp)
     app.register_blueprint(workflow_bp)
     app.register_blueprint(assessments_bp)
+    app.register_blueprint(coding_bp)
 
     @app.get('/api/health')
     def health():
